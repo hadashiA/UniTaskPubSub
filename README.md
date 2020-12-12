@@ -2,7 +2,8 @@
 
 **work in progress**
 
-`IUniTaskAsyncEnumerable` base pub/sub messaging.
+UniTask & `IUniTaskAsyncEnumerable` baseed pub/sub messaging.
+this is like the UniTask version of UniTask.MessageBroker.
 
 
 ## Usage
