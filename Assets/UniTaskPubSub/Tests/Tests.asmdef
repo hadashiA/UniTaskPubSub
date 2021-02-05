@@ -4,9 +4,10 @@
     "references": [
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner",
-        "UniTaskPubSub",
         "UniTask",
-        "UniTask.Linq"
+        "UniTask.Linq",
+        "UniTaskPubSub",
+        "UniTaskPubSub.AsyncEnumerable"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

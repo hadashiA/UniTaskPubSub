@@ -1,8 +1,9 @@
 {
-    "name": "UniTaskPubSub",
+    "name": "UniTaskPubSub.AsyncEnumerable",
     "rootNamespace": "",
     "references": [
-        "UniTask"
+        "UniTask",
+        "UniTask.Linq"
     ],
     "includePlatforms": [
         "Android",

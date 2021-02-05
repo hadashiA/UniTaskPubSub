@@ -4,6 +4,7 @@ using Cysharp.Threading.Tasks;
 using Cysharp.Threading.Tasks.Linq;
 using NUnit.Framework;
 using UnityEngine.TestTools;
+using UniTaskPubSub.AsyncEnumerable;
 
 namespace UniTaskPubSub.Tests
 {
