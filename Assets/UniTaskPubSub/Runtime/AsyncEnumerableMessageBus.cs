@@ -5,17 +5,20 @@ using Cysharp.Threading.Tasks.Linq;
 
 namespace UniTaskPubSub
 {
-    public interface IMessagePublisher
+    public interface IAsyncEnumerablePublisher
     {
         void Publish<T>(T msg);
     }
 
-    public interface IMessageReceiver
+    public interface IAsyncEnumerableReceiver
     {
         IUniTaskAsyncEnumerable<T> Receive<T>();
     }
 
-    public sealed class MessageBus : IMessagePublisher, IMessageReceiver, IDisposable
+    public class AsyncEnumerableMessageBus :
+        IAsyncEnumerablePublisher,
+        IAsyncEnumerableReceiver,
+        IDisposable
     {
         sealed class Pipe<T> : IDisposable
         {
