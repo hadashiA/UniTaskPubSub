@@ -139,6 +139,8 @@ using UniTaskPubSub;
 var messageBus = new AsyncEnumerableMessageBus();
 
 messageBus.Receive<FooMessage>()
+    .Where(msg => msg.Id > 1)
+    .Take(2)
     .Subscribe(async foo => 
     {
         await LoadAsync(foo.Id);
@@ -153,6 +155,7 @@ messageBus.Publish(new FooMessage { Id = 2 });
 messageBus.Publish(new FooMessage { Id = 3 });
     
 ```
+
 
 In Unity 2020.2+ + C# 8, you can also use `await foreach`.
 
