@@ -127,5 +127,20 @@ namespace UniTaskPubSub.Tests
             Assert.That(disposedException, Is.InstanceOf<ObjectDisposedException>());
             Assert.That(receives, Is.Zero);
         });
+
+        [UnityTest]
+        public IEnumerator SubscribeWithSync() => UniTask.ToCoroutine(async () =>
+        {
+            var messageBus = new AsyncMessageBus();
+            var receives = 0;
+
+            messageBus.Subscribe<TestMessage>(msg =>
+            {
+                receives += 1;
+            });
+
+            await messageBus.PublishAsync(new TestMessage(100));
+            Assert.That(receives, Is.EqualTo(1));
+        });
     }
 }

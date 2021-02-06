@@ -1,5 +1,5 @@
 {
-    "name": "Tests",
+    "name": "UniTaskPubSub.Tests",
     "rootNamespace": "",
     "references": [
         "UnityEngine.TestRunner",
