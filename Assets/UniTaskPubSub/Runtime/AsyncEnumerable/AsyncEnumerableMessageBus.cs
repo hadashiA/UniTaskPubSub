@@ -3,19 +3,22 @@ using System.Collections.Generic;
 using Cysharp.Threading.Tasks;
 using Cysharp.Threading.Tasks.Linq;
 
-namespace UniTaskPubSub
+namespace UniTaskPubSub.AsyncEnumerable
 {
-    public interface IMessagePublisher
+    public interface IAsyncEnumerablePublisher
     {
         void Publish<T>(T msg);
     }
 
-    public interface IMessageReceiver
+    public interface IAsyncEnumerableReceiver
     {
         IUniTaskAsyncEnumerable<T> Receive<T>();
     }
 
-    public sealed class MessageBus : IMessagePublisher, IMessageReceiver, IDisposable
+    public class AsyncEnumerableMessageBus :
+        IAsyncEnumerablePublisher,
+        IAsyncEnumerableReceiver,
+        IDisposable
     {
         sealed class Pipe<T> : IDisposable
         {
@@ -39,9 +42,15 @@ namespace UniTaskPubSub
         }
 
         readonly IDictionary<Type, object> pipes = new Dictionary<Type, object>();
+        bool disposed;
 
         public void Publish<T>(T command)
         {
+            if (disposed)
+            {
+                throw new ObjectDisposedException("AsyncEnumerableMessageBus");
+            }
+
             object pipe;
             lock (pipes)
             {
@@ -55,6 +64,11 @@ namespace UniTaskPubSub
 
         public IUniTaskAsyncEnumerable<T> Receive<T>()
         {
+            if (disposed)
+            {
+                throw new ObjectDisposedException("AsyncEnumerableMessageBus");
+            }
+
             object pipe;
             lock (pipes)
             {
@@ -78,6 +92,7 @@ namespace UniTaskPubSub
                         disposable.Dispose();
                     }
                 }
+                disposed = true;
             }
         }
     }
