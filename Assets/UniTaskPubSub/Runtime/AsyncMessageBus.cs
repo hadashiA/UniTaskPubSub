@@ -32,9 +32,20 @@ namespace UniTaskPubSub
     {
         public static IDisposable Subscribe<T>(
             this IAsyncSubscriber subscriber,
-            Func<T, UniTask> onNext)
+            Func<T, UniTask> action)
         {
-            return subscriber.Subscribe<T>((msg, cancellation) => onNext(msg));
+            return subscriber.Subscribe<T>((msg, cancellation) => action(msg));
+        }
+
+        public static IDisposable Subscribe<T>(
+            this IAsyncSubscriber subscriber,
+            Action<T> action)
+        {
+            return subscriber.Subscribe<T>((msg, cancellation) =>
+            {
+                action(msg);
+                return UniTask.CompletedTask;
+            });
         }
     }
 
