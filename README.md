@@ -1,7 +1,7 @@
 # UniTaskPubSub
 
 UniTask & `IUniTaskAsyncEnumerable` based pub/sub messaging.
-This is like the UniTask version of UniTask.MessageBroker.
+This is like the UniTask version of UniRx.MessageBroker.
 
 ## Pub/Sub (Publish/Subscribe) pattern
 
@@ -16,7 +16,7 @@ In the Pub/Sub messaging model, the sender who creates and sends a message is ca
 
 [UniTask](https://github.com/Cysharp/UniTask) is a library that brings fast and powerful async/await to the Unity world.
 
-This library uses UniTask and allows async/await for processing pub/sub messages.
+UniTaskPubSub uses UniTask and allows async/await for processing pub/sub messages.
 
 ## Pub/Sub & Game archtecture
 
