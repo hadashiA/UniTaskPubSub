@@ -165,3 +165,11 @@ await foreach (var foo in messageBus.Receive<FooMessage>())
     // Do something
 }
 ```
+
+## Author
+
+[@hadashiA](https://twitter.com/hadashiA)
+
+## License
+
+MIT
