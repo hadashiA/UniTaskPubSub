@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using Cysharp.Threading.Tasks;
+using UniTaskPubSub.Internal;
 
 namespace UniTaskPubSub
 {
@@ -53,8 +54,38 @@ namespace UniTaskPubSub
     {
         sealed class Pipe<T>
         {
-            public readonly List<Func<T, CancellationToken, UniTask>> Subscribers =
+            readonly List<Func<T, CancellationToken, UniTask>> subscribers =
                 new List<Func<T, CancellationToken, UniTask>>();
+
+            public void AddSubscriber(Func<T, CancellationToken, UniTask> subscriber)
+            {
+                lock (subscribers)
+                {
+                    subscribers.Add(subscriber);
+                }
+            }
+
+            public void RemoveSubscriber(Func<T, CancellationToken, UniTask> subscriber)
+            {
+                lock (subscribers)
+                {
+                    subscribers.Remove(subscriber);
+                }
+            }
+
+            public UniTask FireAllAsync(T msg, CancellationToken cancellation = default)
+            {
+                UniTask[] buffer;
+                lock (subscribers)
+                {
+                    buffer = new UniTask[subscribers.Count];
+                    for (var i = 0; i < subscribers.Count; i++)
+                    {
+                        buffer[i] = subscribers[i](msg, cancellation);
+                    }
+                }
+                return UniTask.WhenAll(buffer);
+            }
         }
 
         sealed class Subscription<T> : IDisposable
@@ -70,18 +101,19 @@ namespace UniTaskPubSub
 
             public void Dispose()
             {
+                Pipe<T> pipe = null;
                 lock (parent.pipes)
                 {
                     if (parent.pipes.TryGetValue(typeof(T), out var entry))
                     {
-                        var pipe = (Pipe<T>)entry;
-                        pipe.Subscribers.Remove(subscriber);
-                    }
+                        pipe = (Pipe<T>)entry; }
                 }
+                pipe?.RemoveSubscriber(subscriber);
             }
         }
 
         readonly IDictionary<Type, object> pipes = new Dictionary<Type, object>();
+
         bool disposed;
 
         public async UniTask PublishAsync<T>(T msg, CancellationToken cancellation = default)
@@ -103,17 +135,7 @@ namespace UniTaskPubSub
                 return;
             }
 
-            var awaiters = new UniTask[pipe.Subscribers.Count];
-            for (var i = 0; i < pipe.Subscribers.Count; i++)
-            {
-                awaiters[i] = pipe.Subscribers[i](msg, cancellation);
-            }
-
-            try
-            {
-                await UniTask.WhenAll(awaiters);
-            }
-            catch (OperationCanceledException) {}
+            await pipe.FireAllAsync(msg, cancellation);
         }
 
         public IDisposable Subscribe<T>(
@@ -135,7 +157,7 @@ namespace UniTaskPubSub
                     pipe = new Pipe<T>();
                     pipes.Add(typeof(T), pipe);
                 }
-                pipe.Subscribers.Add(action);
+                pipe.AddSubscriber(action);
             }
             return new Subscription<T>(this, action);
         }

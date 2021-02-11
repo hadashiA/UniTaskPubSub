@@ -18,7 +18,7 @@ namespace UniTaskPubSub.Tests
         }
     }
 
-    public class MessageBusTest
+    public class AsyncEnumerableMessageBusTest
     {
         [UnityTest]
         public IEnumerator Multicast() => UniTask.ToCoroutine(async () =>

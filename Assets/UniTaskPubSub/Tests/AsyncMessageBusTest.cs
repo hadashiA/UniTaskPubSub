@@ -4,7 +4,6 @@ using System.Threading;
 using Cysharp.Threading.Tasks;
 using NUnit.Framework;
 using UnityEngine.TestTools;
-using UniTaskPubSub.AsyncEnumerable;
 
 namespace UniTaskPubSub.Tests
 {
@@ -71,8 +70,11 @@ namespace UniTaskPubSub.Tests
             });
 
             cts.Cancel();
-            await messageBus.PublishAsync(new TestMessage(100), cts.Token);
-
+            try
+            {
+                await messageBus.PublishAsync(new TestMessage(100), cts.Token);
+            }
+            catch (OperationCanceledException) {}
             Assert.That(receives, Is.Zero);
         });
 
