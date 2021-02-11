@@ -147,7 +147,7 @@ namespace UniTaskPubSub
             if (pipe == null)
                 return UniTask.CompletedTask;
 
-            if (filters.Count > 0)
+            if (filters?.Count > 0)
             {
                 var context = new AsyncPublishContext<T>(msg);
                 return PublishWithFilterRecursiveAsync(
