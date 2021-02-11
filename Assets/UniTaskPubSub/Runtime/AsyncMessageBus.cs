@@ -78,13 +78,20 @@ namespace UniTaskPubSub
                 UniTask[] buffer;
                 lock (subscribers)
                 {
-                    buffer = new UniTask[subscribers.Count];
+                    buffer = CappedArrayPool<UniTask>.Shared8Limit.Rent(subscribers.Count);
                     for (var i = 0; i < subscribers.Count; i++)
                     {
                         buffer[i] = subscribers[i](msg, cancellation);
                     }
                 }
-                return UniTask.WhenAll(buffer);
+                try
+                {
+                    return UniTask.WhenAll(buffer);
+                }
+                finally
+                {
+                    CappedArrayPool<UniTask>.Shared8Limit.Return(buffer);
+                }
             }
         }
 
