@@ -1,3 +1,4 @@
+#if UNITY_2019_4_OR_NEWER
 using System;
 using System.Collections;
 using Cysharp.Threading.Tasks;
@@ -66,3 +67,4 @@ namespace UniTaskPubSub.Tests
         }
     }
 }
+#endif
