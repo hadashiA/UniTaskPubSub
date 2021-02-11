@@ -74,6 +74,8 @@ await messageBus.PublishAsync(new FooMessage { Id = 1 });
 // After PublishAsync awaited, DoSomething1Async and DoSomething2Async have been completed.
 ```
 
+You can also use `AsyncMessageBus.Default` instance, instead of `new AsyncMessageBus()`.
+
 #### Fire & forget
 
 When using Publish(), do not wait for Subscriber.
@@ -153,8 +155,9 @@ messageBus.Receive<FooMessage>()
 messageBus.Publish(new FooMessage { Id = 1 });
 messageBus.Publish(new FooMessage { Id = 2 });
 messageBus.Publish(new FooMessage { Id = 3 });
-    
 ```
+
+You can also use `AsyncEnumerableMessageBus.Default` instance, instead of `new AsyncEnumerableMessageBus()`.
 
 
 In Unity 2020.2+ + C# 8, you can also use `await foreach`.
