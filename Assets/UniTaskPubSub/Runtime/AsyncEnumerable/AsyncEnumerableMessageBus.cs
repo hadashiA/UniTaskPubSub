@@ -41,6 +41,8 @@ namespace UniTaskPubSub.AsyncEnumerable
             }
         }
 
+        public static readonly AsyncEnumerableMessageBus Default = new AsyncEnumerableMessageBus();
+
         readonly IDictionary<Type, object> pipes = new Dictionary<Type, object>();
         bool disposed;
 

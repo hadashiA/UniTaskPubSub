@@ -81,6 +81,8 @@ namespace UniTaskPubSub
             }
         }
 
+        public static readonly AsyncMessageBus Default = new AsyncMessageBus();
+
         readonly IDictionary<Type, object> pipes = new Dictionary<Type, object>();
         bool disposed;
 
