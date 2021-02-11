@@ -35,9 +35,14 @@ It is useful to make the sender and receiver loosely coupled by a Pub/sub messag
 1. Navigate to your project's Packages folder and open the manifest.json file.
 2. Add this line below the "dependencies": { line
     - ```json
-      "jp.hadashikick.unitaskpubsub": "https://github.com/hadashiA/UniTaskPubSub.git?path=Assets/UniTaskPubSub",
+      "jp.hadashikick.unitaskpubsub": "https://github.com/hadashiA/UniTaskPubSub.git?path=Assets/UniTaskPubSub#0.10.0",
       ```
 3. UPM should now install the package.
+
+### Install manually (using .unitypackage)
+
+1. Download the .unitypackage from releases page.
+2. Open UniTaskPubSub.x.x.x.unitypackage
 
 ## Usage
 
