@@ -24,7 +24,7 @@ namespace UniTaskPubSub.Tests
             await messageBus.PublishAsync(new TestMessage(100));
 
             Assert.That(received, Is.InstanceOf<TestMessage>());
-            Assert.That(received.X, Is.EqualTo(100));
+            Assert.That(received.Id, Is.EqualTo(100));
         });
 
         [UnityTest]
