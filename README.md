@@ -118,6 +118,62 @@ messageBus.Subscribe<FooMessage>(...)
     .AddTo(cancellationToken);
 ```
 
+#### Filter
+
+AsyncMessageBus can insert any preprocessing or postprocessing into publish.
+This feature is called a filter.
+
+Filters can be used to do the following in one step
+- Insert logging.
+- Ignore certain messages
+- etc..
+
+Examples:
+
+```csharp
+// Add filter type
+class LoggingFilter : IAsyncPublishFilter
+{
+    public async UniTask PublishFilterAsync<T>(
+        T msg,
+        CancellationToken cancellation,
+        Func<T, CancellationToken, UniTask> next)
+    {
+        UnityEngine.Debug.Log($"Publish {msg.GetType()}");
+        await next(msg, cancellation); // Processing all subscribers.
+        UnityEngine.Debug.Log($"Invoked {msg.GetType()}");
+    }
+}
+
+class IgnoreFilter : IAsyncPublishFilter
+{
+    public async UniTask PublishFilterAsync<T>(
+        T msg,
+        CancellationToken cancellation,
+        Func<T, CancellationToken, UniTask> next)
+    {
+        if (msg is FooMessage foo)
+        {
+            if (msg.SomeCondition) 
+            {
+                UnityEngine.Debug.LogWarning($"Ignore {msg}")
+                return;
+            }
+        }
+        await next(msg, cancellation); // Processing all subscribers.
+    }
+}
+```
+
+```csharp
+// Create filter inserted MessageBus
+var messageBus = new AsyncMessageBus(new IAsyncPublishFilter[]
+{
+    new LoggingFilter(),
+    new IgnoreFilter(),
+});
+```
+
 
 ### IUniTaskAsyncEnumerable based pub/sub
 

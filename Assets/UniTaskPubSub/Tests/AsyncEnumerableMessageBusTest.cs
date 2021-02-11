@@ -1,4 +1,3 @@
-#if UNITY_2019_4_OR_NEWER
 using System;
 using System.Collections;
 using Cysharp.Threading.Tasks;
@@ -11,11 +10,11 @@ namespace UniTaskPubSub.Tests
 {
     readonly struct TestMessage
     {
-        public readonly int X;
+        public readonly int Id;
 
         public TestMessage(int x)
         {
-            X = x;
+            Id = x;
         }
     }
 
@@ -28,10 +27,10 @@ namespace UniTaskPubSub.Tests
             var receives = 0;
 
             messageBus.Receive<TestMessage>()
-                .SelectAwait(async cmd =>
+                .SelectAwait(async msg =>
                 {
                     await UniTask.Yield();
-                    return cmd.X;
+                    return msg.Id;
                 })
                 .Subscribe(_ => receives += 1);
 
@@ -67,4 +66,3 @@ namespace UniTaskPubSub.Tests
         }
     }
 }
-#endif

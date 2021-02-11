@@ -122,10 +122,15 @@ namespace UniTaskPubSub
         public static readonly AsyncMessageBus Default = new AsyncMessageBus();
 
         readonly IDictionary<Type, object> pipes = new Dictionary<Type, object>();
-
+        readonly IReadOnlyList<IAsyncPublishFilter> filters;
         bool disposed;
 
-        public async UniTask PublishAsync<T>(T msg, CancellationToken cancellation = default)
+        public AsyncMessageBus(IReadOnlyList<IAsyncPublishFilter> filters = null)
+        {
+            this.filters = filters;
+        }
+
+        public UniTask PublishAsync<T>(T msg, CancellationToken cancellation = default)
         {
             Pipe<T> pipe = null;
             lock (pipes)
@@ -140,11 +145,18 @@ namespace UniTaskPubSub
             }
 
             if (pipe == null)
-            {
-                return;
-            }
+                return UniTask.CompletedTask;
 
-            await pipe.FireAllAsync(msg, cancellation);
+            if (filters?.Count > 0)
+            {
+                var context = new AsyncPublishContext<T>(msg);
+                return PublishWithFilterRecursiveAsync(
+                    context,
+                    cancellation,
+                    (filteredContext, filteredCancellation) => pipe.FireAllAsync(filteredContext.Message, filteredCancellation));
+
+            }
+            return pipe.FireAllAsync(msg, cancellation);
         }
 
         public IDisposable Subscribe<T>(
@@ -178,6 +190,26 @@ namespace UniTaskPubSub
                 pipes.Clear();
                 disposed = true;
             }
+        }
+
+        UniTask PublishWithFilterRecursiveAsync<T>(
+            AsyncPublishContext<T> context,
+            CancellationToken cancellation,
+            Func<AsyncPublishContext<T>, CancellationToken, UniTask> next)
+        {
+            if (context.CurrenetFilterIndex <= filters.Count - 1)
+            {
+                var nextFilter = filters[context.CurrenetFilterIndex++];
+                return nextFilter.PublishFilterAsync(
+                    context.Message,
+                    cancellation,
+                    (nextMessage, nextCancellation) =>
+                    {
+                        context.Message = nextMessage;
+                        return PublishWithFilterRecursiveAsync(context, nextCancellation, next);
+                    });
+            }
+            return next(context, cancellation);
         }
     }
 }
