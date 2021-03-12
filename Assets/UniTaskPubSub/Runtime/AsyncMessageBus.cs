@@ -13,9 +13,7 @@ namespace UniTaskPubSub
 
     public interface IAsyncSubscriber
     {
-        IDisposable Subscribe<T>(
-            Func<T, CancellationToken, UniTask> action,
-            CancellationToken cancellation = default);
+        IDisposable Subscribe<T>(Func<T, CancellationToken, UniTask> action);
     }
 
     public static class AsyncPublisherExtensions
@@ -113,7 +111,8 @@ namespace UniTaskPubSub
                 {
                     if (parent.pipes.TryGetValue(typeof(T), out var entry))
                     {
-                        pipe = (Pipe<T>)entry; }
+                        pipe = (Pipe<T>)entry;
+                    }
                 }
                 pipe?.RemoveSubscriber(subscriber);
             }
@@ -159,9 +158,7 @@ namespace UniTaskPubSub
             return pipe.FireAllAsync(msg, cancellation);
         }
 
-        public IDisposable Subscribe<T>(
-            Func<T, CancellationToken, UniTask> action,
-            CancellationToken cancellationToken = default)
+        public IDisposable Subscribe<T>(Func<T, CancellationToken, UniTask> action)
         {
             Pipe<T> pipe;
             lock (pipes)
