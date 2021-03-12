@@ -46,6 +46,33 @@ namespace UniTaskPubSub
                 return UniTask.CompletedTask;
             });
         }
+
+        public static void Subscribe<T>(
+            this IAsyncSubscriber subscriber,
+            Func<T, CancellationToken, UniTask> action,
+            CancellationToken unsubscribeToken)
+        {
+            var subscription = subscriber.Subscribe(action);
+            unsubscribeToken.Register(x => ((IDisposable)x).Dispose(), subscription);
+        }
+
+        public static void Subscribe<T>(
+            this IAsyncSubscriber subscriber,
+            Func<T, UniTask> action,
+            CancellationToken unsubscribeToken)
+        {
+            var subscription = subscriber.Subscribe(action);
+            unsubscribeToken.Register(x => ((IDisposable)x).Dispose(), subscription);
+        }
+
+        public static void Subscribe<T>(
+            this IAsyncSubscriber subscriber,
+            Action<T> action,
+            CancellationToken unsubscribeToken)
+        {
+            var subscription = subscriber.Subscribe(action);
+            unsubscribeToken.Register(x => ((IDisposable)x).Dispose(), subscription);
+        }
     }
 
     public class AsyncMessageBus : IAsyncPublisher, IAsyncSubscriber, IDisposable
