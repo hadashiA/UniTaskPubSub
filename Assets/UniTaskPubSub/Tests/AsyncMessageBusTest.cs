@@ -55,6 +55,8 @@ namespace UniTaskPubSub.Tests
         {
             var messageBus = new AsyncMessageBus();
             var cts = new CancellationTokenSource();
+
+            var exception = default(Exception);
             var receives = 0;
 
             messageBus.Subscribe<TestMessage>(async (msg, cancellation) =>
@@ -74,8 +76,13 @@ namespace UniTaskPubSub.Tests
             {
                 await messageBus.PublishAsync(new TestMessage(100), cts.Token);
             }
-            catch (OperationCanceledException) {}
+            catch (Exception ex)
+            {
+                exception = ex;
+            }
+
             Assert.That(receives, Is.Zero);
+            Assert.That(exception, Is.InstanceOf<OperationCanceledException>());
         });
 
         [UnityTest]
