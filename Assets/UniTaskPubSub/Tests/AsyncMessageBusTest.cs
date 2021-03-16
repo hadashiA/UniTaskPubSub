@@ -138,17 +138,29 @@ namespace UniTaskPubSub.Tests
         });
 
         [UnityTest]
-        public IEnumerator SubscribeWithSync() => UniTask.ToCoroutine(async () =>
+        public IEnumerator CancelSubscription() => UniTask.ToCoroutine(async () =>
         {
             var messageBus = new AsyncMessageBus();
+            var unsubscribeTokenSource1 = new CancellationTokenSource();
+            var unsubscribeTokenSource2 = new CancellationTokenSource();
             var receives = 0;
 
-            messageBus.Subscribe<TestMessage>(msg =>
+            messageBus.Subscribe<TestMessage>(async msg =>
             {
+                await UniTask.Yield();
                 receives += 1;
-            });
+            }, unsubscribeTokenSource1.Token);
+
+            messageBus.Subscribe<TestMessage>(async msg =>
+            {
+                await UniTask.Yield();
+                receives += 1;
+            }, unsubscribeTokenSource2.Token);
+
+            unsubscribeTokenSource1.Cancel();
 
             await messageBus.PublishAsync(new TestMessage(100));
+
             Assert.That(receives, Is.EqualTo(1));
         });
     }
