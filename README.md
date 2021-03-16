@@ -105,8 +105,11 @@ messageBus.Subscribe<FooMessage>(async (msg, cancellationToken) =>
 await messageBus.PublishAsync(new FooMessage(), cancellationToken);
 ```
 
-#### Subscription
+#### Unsubscribe
 
+There are 2 ways to unsubscribe.
+
+#### 1. `IDisposable`
 
 `Subscribe` returns `IDisposable`. 
 Disposing of this will unsubscribe.
@@ -119,9 +122,26 @@ subscription.Dispose();
 The `AddTo` extension to UniTask is useful.
 
 ```csharp
-messageBus.Subscribe<FooMessage>(...)
-    .AddTo(cancellationToken);
+messageBus.Subscribe<FooMessage>(msg =>
+    {
+        // ...
+    })
+    .AddTo(...);
 ```
+
+#### 2. `CancellationToken`
+
+You can pass a cancellationToken to Subscribe.
+
+```csharp
+messageBus.Subscribe<FooMessage>(msg =>
+{
+    // ...
+}, cancellationToken);
+```
+
+When this token is canceled, it will be unsubscribed.
+
 
 #### Filter
 
