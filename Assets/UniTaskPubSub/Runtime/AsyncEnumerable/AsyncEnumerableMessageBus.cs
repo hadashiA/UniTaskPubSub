@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Threading;
 using Cysharp.Threading.Tasks;
 using Cysharp.Threading.Tasks.Linq;
 
@@ -7,94 +8,188 @@ namespace UniTaskPubSub.AsyncEnumerable
 {
     public interface IAsyncEnumerablePublisher
     {
-        void Publish<T>(T msg);
+        UniTask PublishAsync<T>(T msg, CancellationToken cancellation = default);
     }
 
-    public interface IAsyncEnumerableReceiver
+    public interface IAsyncEnumerableSubscriber
     {
         IUniTaskAsyncEnumerable<T> Receive<T>();
+        IDisposable Subscribe<T>(Func<T, CancellationToken, UniTask> action, CancellationToken cancellation = default);
     }
 
-    public class AsyncEnumerableMessageBus :
-        IAsyncEnumerablePublisher,
-        IAsyncEnumerableReceiver,
-        IDisposable
+    public static class AsyncPublisherExtensions
     {
-        sealed class Pipe<T> : IDisposable
+        public static void Publish<T>(
+            this IAsyncEnumerablePublisher publisher,
+            T msg,
+            CancellationToken cancellation = default)
         {
-            public readonly ChannelWriter<T> Writer;
+            publisher.PublishAsync(msg, cancellation).Forget();
+        }
+    }
+
+    class SubscribeAsyncEnumerable<T> : MoveNextSource, IUniTaskAsyncEnumerable<AsyncUnit>, IUniTaskAsyncEnumerator<AsyncUnit>
+    {
+        readonly IUniTaskAsyncEnumerator<T> source;
+        readonly Func<T, CancellationToken, UniTask> action;
+        readonly CancellationToken cancellation;
+
+        public SubscribeAsyncEnumerable(
+            IUniTaskAsyncEnumerator<T> source,
+            Func<T, CancellationToken, UniTask> action,
+            CancellationToken cancellation = default)
+        {
+            this.source = source;
+            this.action = action;
+            this.cancellation = cancellation;
+        }
+
+        public AsyncUnit Current => AsyncUnit.Default;
+
+        public IUniTaskAsyncEnumerator<AsyncUnit> GetAsyncEnumerator(CancellationToken cancellationToken = default)
+        {
+            return this;
+        }
+
+        public UniTask DisposeAsync()
+        {
+            return UniTask.CompletedTask;
+        }
+
+        public async UniTask<bool> MoveNextAsync()
+        {
+            cancellation.ThrowIfCancellationRequested();
+            if (await source.MoveNextAsync())
+            {
+                await action(source.Current, cancellation);
+                return true;
+            }
+            return false;
+        }
+    }
+
+    public class AsyncEnumerableMessageBus : IAsyncEnumerablePublisher, IAsyncEnumerableSubscriber
+    {
+        class Pipe<T> : IDisposable
+        {
             public readonly IConnectableUniTaskAsyncEnumerable<T> MulticastSource;
-            public readonly IDisposable Connection;
+
+            readonly Channel<T> channel = Channel.CreateSingleConsumerUnbounded<T>();
+            readonly IDisposable connection;
+            readonly List<SubscribeAsyncEnumerable<T>> subscribers = new();
 
             public Pipe()
             {
-                var channel = Channel.CreateSingleConsumerUnbounded<T>();
-                Writer = channel.Writer;
                 MulticastSource = channel.Reader.ReadAllAsync().Publish();
-                Connection = MulticastSource.Connect();
+                connection = MulticastSource.Connect();
+            }
+
+            public Subscription<T> AddSubscriber(
+                Func<T, CancellationToken, UniTask> action,
+                CancellationToken cancellation = default)
+            {
+                var subscriber = new SubscribeAsyncEnumerable<T>(
+                    MulticastSource.GetAsyncEnumerator(),
+                    action,
+                    cancellation);
+                lock (subscribers)
+                {
+                    subscribers.Add(subscriber);
+                }
+                return new Subscription<T>(this, subscriber);
+            }
+
+            public void RemoveSubscriber(SubscribeAsyncEnumerable<T> subscriber)
+            {
+                lock (subscribers)
+                {
+                    subscribers.Remove(subscriber);
+                }
+            }
+
+            public async UniTask WriteAsync(T msg, CancellationToken cancellation = default)
+            {
+                channel.Writer.TryWrite(msg);
+                foreach (var subscription in subscribers)
+                {
+                    await subscription.MoveNextAsync();
+                }
             }
 
             public void Dispose()
             {
-                Writer.TryComplete();
-                Connection.Dispose();
+                channel.Writer.TryComplete();
+                connection.Dispose();
             }
         }
 
-        public static readonly AsyncEnumerableMessageBus Default = new AsyncEnumerableMessageBus();
+        readonly struct Subscription<T> : IDisposable
+        {
+            public readonly Pipe<T> Pipe;
+            public readonly SubscribeAsyncEnumerable<T> Subscriber;
+
+            public Subscription(Pipe<T> pipe, SubscribeAsyncEnumerable<T> subscriber)
+            {
+                Pipe = pipe;
+                Subscriber = subscriber;
+            }
+
+            public void Dispose()
+            {
+                Subscriber.DisposeAsync();
+                Pipe.RemoveSubscriber(Subscriber);
+            }
+        }
 
         readonly IDictionary<Type, object> pipes = new Dictionary<Type, object>();
         bool disposed;
 
-        public void Publish<T>(T command)
+        public UniTask PublishAsync<T>(T msg, CancellationToken cancellation = default)
         {
-            if (disposed)
-            {
-                throw new ObjectDisposedException("AsyncEnumerableMessageBus");
-            }
+            if (disposed) throw new ObjectDisposedException("AsyncEnumerableMessageBus");
 
-            object pipe;
+            Pipe<T> pipe = null;
             lock (pipes)
             {
-                if (!pipes.TryGetValue(typeof(T), out pipe))
+                if (pipes.TryGetValue(typeof(T), out var entry))
                 {
-                    return;
+                    pipe = (Pipe<T>)entry;
                 }
             }
-            ((Pipe<T>)pipe).Writer.TryWrite(command);
+
+            if (pipe == null)
+            {
+                return UniTask.CompletedTask;
+            }
+            return pipe.WriteAsync(msg, cancellation);
         }
 
         public IUniTaskAsyncEnumerable<T> Receive<T>()
         {
-            if (disposed)
-            {
-                throw new ObjectDisposedException("AsyncEnumerableMessageBus");
-            }
+            if (disposed) throw new ObjectDisposedException("AsyncEnumerableMessageBus");
 
-            object pipe;
-            lock (pipes)
-            {
-                if (!pipes.TryGetValue(typeof(T), out pipe))
-                {
-                    pipe = new Pipe<T>();
-                    pipes.Add(typeof(T), pipe);
-                }
-            }
-            return ((Pipe<T>)pipe).MulticastSource;
+            return GetOrCreatePipe<T>().MulticastSource;
         }
 
-        public void Dispose()
+        public IDisposable Subscribe<T>(
+            Func<T, CancellationToken, UniTask> action,
+            CancellationToken cancellation = default)
+        {
+            if (disposed) throw new ObjectDisposedException("AsyncEnumerableMessageBus");
+            return GetOrCreatePipe<T>().AddSubscriber(action, cancellation);
+        }
+
+        Pipe<T> GetOrCreatePipe<T>()
         {
             lock (pipes)
             {
-                foreach (var entry in pipes)
+                if (pipes.TryGetValue(typeof(T), out var entry))
                 {
-                    if (entry.Value is IDisposable disposable)
-                    {
-                        disposable.Dispose();
-                    }
+                    return (Pipe<T>)entry;
                 }
-                disposed = true;
+                var pipe = new Pipe<T>();
+                pipes.Add(typeof(T), pipe);
+                return pipe;
             }
         }
     }

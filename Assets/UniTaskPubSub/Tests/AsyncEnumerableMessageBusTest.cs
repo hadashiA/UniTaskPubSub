@@ -37,7 +37,7 @@ namespace UniTaskPubSub.Tests
             messageBus.Receive<TestMessage>()
                 .Subscribe(_ => receives += 1);
 
-            messageBus.Publish(new TestMessage(100));
+            await messageBus.PublishAsync(new TestMessage(100));
 
             await UniTask.Delay(500);
 
