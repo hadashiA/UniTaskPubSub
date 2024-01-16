@@ -1,3 +1,6 @@
+> [!IMPORTANT]
+> This project is archived. The author is currently working on a [VitalRouter](https://github.com/hadashiA/ViralRouter) that takes over the concept. I hope you will consider this library's low-level api as an alternative.
+
 # UniTaskPubSub
 
 UniTask & `IUniTaskAsyncEnumerable` based pub/sub messaging.
